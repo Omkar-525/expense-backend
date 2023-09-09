@@ -1,6 +1,8 @@
 package com.omkar.expensetracker.infra.entity;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
 import java.io.Serializable;
@@ -20,19 +22,27 @@ public class Transaction implements Serializable {
     private Long id;
 
     @Column(name = "date")
-    private Date date;
+    private String date; // 12-AUG-2023
 
     @Column(name = "type")
     private String type;
 
-    @OneToOne
-    @JoinColumn(name = "category_id", referencedColumnName = "id")
+    @Column(name = "description")
+    private String description;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "category_id")
     private Category category;
 
     @Column(name = "amount")
     private Integer amount;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "split_id")
+    @JsonIgnore
     private Split split;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(referencedColumnName = "user_id")
+    private User user;
 }
