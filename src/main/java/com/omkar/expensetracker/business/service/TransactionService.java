@@ -12,4 +12,6 @@ public interface TransactionService {
      BaseResponse setTransaction(String authorizationHeader, SetTransactionRequest request);
 
      BaseResponse deleteTransaction(String authorizationHeader, Long id);
+
+     GetTransactionResponse getAllTransaction(String authorizationHeader);
 }

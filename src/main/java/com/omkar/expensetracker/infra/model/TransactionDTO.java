@@ -19,6 +19,7 @@ public class TransactionDTO implements Serializable {
     public String type;
     public String category;
     public Integer amount;
+    public String description;
 
     public TransactionDTO(Transaction transaction) {
         this.id=transaction.getId();
@@ -26,6 +27,6 @@ public class TransactionDTO implements Serializable {
         this.category= transaction.getCategory().getName();
         this.date = transaction.getDate();
         this.type = transaction.getType();
-
+        this.description = transaction.getDescription();
     }
 }

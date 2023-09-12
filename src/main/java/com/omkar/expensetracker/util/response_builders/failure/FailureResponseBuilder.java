@@ -2,6 +2,7 @@ package com.omkar.expensetracker.util.response_builders.failure;
 
 import com.omkar.expensetracker.infra.model.BaseResponse;
 import com.omkar.expensetracker.infra.model.response.GetBudgetResponse;
+import com.omkar.expensetracker.infra.model.response.GetDashboardResponse;
 import com.omkar.expensetracker.infra.model.response.GetTransactionResponse;
 import com.omkar.expensetracker.infra.model.response.LoginResponse;
 import com.omkar.expensetracker.util.response_builders.BaseFailure;
@@ -36,6 +37,16 @@ public class FailureResponseBuilder {
     public GetTransactionResponse getTransaction(String description) {
         BaseResponse baseResponse = baseFailure.baseFailResponse(description);
         return GetTransactionResponse.builder()
+                .status(baseResponse.getStatus())
+                .responseDescription(baseResponse.getResponseDescription())
+                .responseCode(baseResponse.getResponseCode())
+                .httpStatus(baseResponse.getHttpStatus())
+                .build();
+    }
+
+    public GetDashboardResponse dashboardInfo(String description) {
+        BaseResponse baseResponse = baseFailure.baseFailResponse(description);
+        return GetDashboardResponse.builder()
                 .status(baseResponse.getStatus())
                 .responseDescription(baseResponse.getResponseDescription())
                 .responseCode(baseResponse.getResponseCode())

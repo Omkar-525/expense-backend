@@ -1,29 +1,31 @@
 package com.omkar.expensetracker.business.service.impl;
 
 import com.omkar.expensetracker.business.service.SplitService;
-import com.omkar.expensetracker.infra.entity.Split;
-import com.omkar.expensetracker.infra.entity.Transaction;
-import com.omkar.expensetracker.infra.entity.Debt;
-import com.omkar.expensetracker.infra.entity.User;
+import com.omkar.expensetracker.infra.entity.*;
 import com.omkar.expensetracker.infra.exception.InvalidJwtException;
+import com.omkar.expensetracker.infra.model.BaseResponse;
+import com.omkar.expensetracker.infra.model.CreditorDebts;
 import com.omkar.expensetracker.infra.model.request.CreateSplitRequest;
+import com.omkar.expensetracker.infra.repository.SettlementRepository;
 import com.omkar.expensetracker.infra.repository.SplitRepository;
 import com.omkar.expensetracker.infra.repository.UserRepository;
 import com.omkar.expensetracker.infra.repository.TransactionRepository;
 
 import com.omkar.expensetracker.security.jwt.JwtUtil;
 import com.omkar.expensetracker.util.DebtCalculator;
+import com.omkar.expensetracker.util.response_builders.BaseFailure;
+import com.omkar.expensetracker.util.response_builders.BaseSuccess;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityNotFoundException;
 import javax.transaction.Transactional;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.math.BigDecimal;
+import java.util.*;
 
 @Service
 public class SplitServiceImpl implements SplitService {
@@ -41,7 +43,17 @@ public class SplitServiceImpl implements SplitService {
     private JwtUtil jwtUtil;
 
     @Autowired
+    private SettlementRepository settlementRepository;
+
+
+    @Autowired
     private UserDetailsService userDetailsService;
+
+    @Autowired
+    private BaseFailure baseFailure;
+
+    @Autowired
+    private BaseSuccess baseSuccess;
 
     @Autowired
     private DebtCalculator debtCalculator;
@@ -73,6 +85,7 @@ public class SplitServiceImpl implements SplitService {
         Split split = new Split();
         split.setUsers(new HashSet<>(users));
         split.setTitle(request.getTitle());
+        split.setOwner(loggedInUser);
         return splitRepository.save(split);
     }
 
@@ -107,29 +120,135 @@ public class SplitServiceImpl implements SplitService {
     }
 
     @Override
-    public List<Debt> getDebtSummary(String authorizationHeader, Long splitId) {
+    public List<CreditorDebts> getDebtSummary(String authorizationHeader, Long splitId) {
         validateUserFromJwt(authorizationHeader);
         Split split = splitRepository.findById(splitId).orElseThrow(() -> new EntityNotFoundException("Split not found"));
 
-        // Assuming you have a utility method to calculate debts for a given split
-        return debtCalculator.calculateDebts(split);
+        Map<User, Map<User, BigDecimal>> groupedDebts = new HashMap<>();
+
+        // For each transaction, calculate the individual debts
+        for (Transaction transaction : split.getTransactions()) {
+            User creditor = transaction.getUser();
+            double amount = transaction.getAmount();
+            double share = amount / split.getUsers().size();
+
+            groupedDebts.putIfAbsent(creditor, new HashMap<>());
+
+            for (User user : split.getUsers()) {
+                if (!user.equals(creditor)) {
+                    BigDecimal debtorAmount = groupedDebts.get(creditor).getOrDefault(user, BigDecimal.ZERO);
+                    debtorAmount = debtorAmount.add(BigDecimal.valueOf(share));
+                    groupedDebts.get(creditor).put(user, debtorAmount);
+                }
+            }
+        }
+        List<CreditorDebts> results = new ArrayList<>();
+        for (Map.Entry<User, Map<User, BigDecimal>> entry : groupedDebts.entrySet()) {
+            User creditor = entry.getKey();
+            CreditorDebts creditorDebts = new CreditorDebts();
+            creditorDebts.setCreditor(creditor);
+
+            List<Debt> debtsForCreditor = new ArrayList<>();
+            for (Map.Entry<User, BigDecimal> debtorEntry : entry.getValue().entrySet()) {
+                Debt debt = new Debt();
+                debt.setCreditor(entry.getKey());
+                debt.setDebtor(debtorEntry.getKey());
+                debt.setAmount(debtorEntry.getValue());
+                debtsForCreditor.add(debt);
+            }
+
+            creditorDebts.setDebts(debtsForCreditor);
+            results.add(creditorDebts);
+        }
+
+
+        return results;
     }
 
     @Override
+    @Transactional
     public Split finalizeSplit(String authorizationHeader, Long splitId) {
         validateUserFromJwt(authorizationHeader);
-        Split split = splitRepository.findById(splitId).orElseThrow(() -> new EntityNotFoundException("Split not found"));
+        Split split = splitRepository.findById(splitId)
+                .orElseThrow(() -> new EntityNotFoundException("Split not found"));
 
-        // Assuming Split entity has a 'finalized' field
+        User loggedInUser = validateAndExtractUserFromJwt(authorizationHeader);
+
+        if (!loggedInUser.equals(split.getOwner())) {
+            throw new IllegalArgumentException("Unauthorized to finalize the split");
+        }
+
+        // Calculating and storing settlements
+        Map<User, Map<User, BigDecimal>> groupedDebts = new HashMap<>();
+
+        for (Transaction transaction : split.getTransactions()) {
+            User creditor = transaction.getUser();
+            double amount = transaction.getAmount();
+            double share = amount / split.getUsers().size();
+
+            for (User user : split.getUsers()) {
+                if (!user.equals(creditor)) {
+                    groupedDebts.putIfAbsent(creditor, new HashMap<>());
+                    BigDecimal debtorAmount = groupedDebts.get(creditor).getOrDefault(user, BigDecimal.ZERO);
+                    debtorAmount = debtorAmount.add(BigDecimal.valueOf(share));
+                    groupedDebts.get(creditor).put(user, debtorAmount);
+                }
+            }
+        }
+
+        // Save settlements in a batch
+        List<Settlement> settlements = new ArrayList<>();
+        for (Map.Entry<User, Map<User, BigDecimal>> entry : groupedDebts.entrySet()) {
+            User creditor = entry.getKey();
+
+            for (Map.Entry<User, BigDecimal> debtorEntry : entry.getValue().entrySet()) {
+                // Create a corresponding Settlement entry:
+                Settlement settlement = new Settlement();
+                settlement.setCreditor(creditor);
+                settlement.setDebtor(debtorEntry.getKey());
+                settlement.setAmount(debtorEntry.getValue());
+                settlements.add(settlement);
+            }
+        }
+        settlementRepository.saveAll(settlements);  // Assuming this method exists
+
+        // Finalizing split
         split.setIsFinalized(true);
         return splitRepository.save(split);
     }
+
 
     @Override
     public List<Split> getAllSplitsForUser(String authorizationHeader) {
         User loggedInUser = validateAndExtractUserFromJwt(authorizationHeader);
 
         return new ArrayList<>(loggedInUser.getSplits());
+    }
+
+    @Override
+    public ResponseEntity<BaseResponse> addUsersToSplit(String authorizationHeader, Long splitId, List<Long> userIds) {
+        User loggedInUser = validateAndExtractUserFromJwt(authorizationHeader);
+        Optional<Split> splitOptional = splitRepository.findById(splitId);
+        if (!splitOptional.isPresent()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(baseFailure.baseFailResponse("Invalid Split Id"));
+        }
+        if(!splitOptional.get().getUsers().contains(loggedInUser)){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(baseFailure.baseFailResponse("Unauthorized to chaneg the split"));
+        }
+        Split split = splitOptional.get();
+        List<User> usersToAdd = userRepository.findAllById(userIds);
+
+        if (usersToAdd.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(baseFailure.baseFailResponse("In valid User ids"));
+        }
+
+        split.getUsers().addAll(usersToAdd);
+        splitRepository.save(split);
+        usersToAdd.forEach(user -> user.getSplits().add(split));
+        userRepository.saveAll(usersToAdd);
+
+        return ResponseEntity.status(HttpStatus.OK).body(baseSuccess.baseSuccessResponse("Users added successfully"));
+
     }
 
 

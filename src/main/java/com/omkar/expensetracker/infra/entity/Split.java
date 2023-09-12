@@ -1,6 +1,9 @@
 package com.omkar.expensetracker.infra.entity;
 
 import javax.persistence.*;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -16,6 +19,7 @@ import java.util.Set;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Split implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,6 +29,7 @@ public class Split implements Serializable {
     private String title;
 
     @OneToMany(mappedBy = "split")
+    @JsonIgnore
     private Set<Transaction> transactions;
 
     @ManyToMany(fetch = FetchType.LAZY)
@@ -34,10 +39,14 @@ public class Split implements Serializable {
             inverseJoinColumns = @JoinColumn(name = "user_id"))
     private Set<User> users;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
     @Version
     private int version;
 
-    private Boolean isFinalized;
+    private Boolean isFinalized = false;
 
     // Auditing fields
     @Column(name = "created_at", nullable = false, updatable = false)

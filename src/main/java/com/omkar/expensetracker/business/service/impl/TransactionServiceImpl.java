@@ -155,4 +155,25 @@ public class TransactionServiceImpl implements TransactionService {
         }
         return baseFailure.baseFailResponse("Invalid JWT");
     }
+
+    @Override
+    public GetTransactionResponse getAllTransaction(String authorizationHeader) {
+        String jwt = authorizationHeader.substring(7);
+        String email = jwtUtil.extractUsername(jwt);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+
+        if (Boolean.TRUE.equals(jwtUtil.validateToken(jwt, userDetails))) {
+            try {
+                Optional<User> user = userRepository.findByEmail(email);
+                if (user.isPresent()) {
+                    List<Transaction> transactions = transactionRepository.findAllByUser(user.get());
+                    return successResponse.getTransaction(transactions);
+                }
+                return failureResponse.getTransaction("User Not Present");
+            } catch (Exception ex) {
+                return failureResponse.getTransaction("Something went wrong");
+            }
+        }
+        return failureResponse.getTransaction("Invalid JWT");
+    }
 }

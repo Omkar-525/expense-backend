@@ -6,6 +6,9 @@ import com.omkar.expensetracker.infra.entity.Split;
 import com.omkar.expensetracker.infra.entity.Transaction;
 import com.omkar.expensetracker.infra.exception.InvalidJwtException;
 import com.omkar.expensetracker.infra.exception.UserNotFoundException;
+import com.omkar.expensetracker.infra.model.BaseResponse;
+import com.omkar.expensetracker.infra.model.CreditorDebts;
+import com.omkar.expensetracker.infra.model.request.AddUserToSplitRequest;
 import com.omkar.expensetracker.infra.model.request.CreateSplitRequest;
 import com.omkar.expensetracker.infra.model.response.DataResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
 
 @RestController
 @CrossOrigin("*")
@@ -67,11 +71,17 @@ public class SplitController {
     public ResponseEntity<DataResponse<List<Transaction>>> getTransactionsOfSplit(
             @RequestHeader(value = "Authorization") String authorizationHeader, @PathVariable Long splitId) {
         return ResponseEntity.ok(new DataResponse<>(HttpStatus.OK, "Success", "200",
-                "Transactions fetched successfully", splitService.getTransactionsOfSplit(authorizationHeader, splitId)));
+                "Transactions fetched successfully",
+                splitService.getTransactionsOfSplit(authorizationHeader, splitId)));
+    }
+    @PutMapping("/addUsers/{splitId}")
+    public ResponseEntity<BaseResponse> addUsersToSplit(@RequestHeader(value = "Authorization") String authorizationHeader,
+            @PathVariable Long splitId, @RequestBody AddUserToSplitRequest request) {
+        return splitService.addUsersToSplit(authorizationHeader,splitId, request.getUserIds());
     }
 
     @GetMapping("/{splitId}/debts")
-    public ResponseEntity<DataResponse<List<Debt>>> getDebtSummary(
+    public ResponseEntity<DataResponse<List<CreditorDebts>>> getDebtSummary(
             @RequestHeader(value = "Authorization") String authorizationHeader, @PathVariable Long splitId) {
         return ResponseEntity.ok(new DataResponse<>(HttpStatus.OK, "Success", "200",
                 "Debt summary fetched successfully", splitService.getDebtSummary(authorizationHeader, splitId)));
@@ -80,6 +90,7 @@ public class SplitController {
     @PutMapping("/{splitId}/finalize")
     public ResponseEntity<DataResponse<Split>> finalizeSplit(
             @RequestHeader(value = "Authorization") String authorizationHeader, @PathVariable Long splitId) {
+
         return ResponseEntity.ok(new DataResponse<>(HttpStatus.OK, "Success", "200",
                 "Split finalized successfully", splitService.finalizeSplit(authorizationHeader, splitId)));
     }

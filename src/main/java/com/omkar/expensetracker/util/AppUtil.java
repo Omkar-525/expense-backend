@@ -24,4 +24,11 @@ public class AppUtil {
         return formattedDate;
     }
 
+    public String getMonth() {
+        LocalDate currentDate = LocalDate.now();
+        // Format the date
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM");
+        String formattedDate = currentDate.format(formatter).toUpperCase();
+        return formattedDate;
+    }
 }

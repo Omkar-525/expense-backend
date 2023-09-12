@@ -3,6 +3,7 @@ package com.omkar.expensetracker.infra.entity;
 import javax.persistence.*;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 
 import java.io.Serializable;
@@ -14,6 +15,7 @@ import java.util.Date;
 @Getter
 @Setter
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Budget implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

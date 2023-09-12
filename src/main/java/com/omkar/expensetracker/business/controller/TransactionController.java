@@ -22,6 +22,11 @@ public class TransactionController {
         return transactionService.getTransaction(authorizationHeader, month, "DEBIT");
     }
 
+    @GetMapping("/allTransaction")
+    public GetTransactionResponse getTransactions(@RequestHeader(value = "Authorization") String authorizationHeader) {
+        return transactionService.getAllTransaction(authorizationHeader);
+    }
+
     @GetMapping("/all/{month}")
     public GetTransactionResponse getAllTransaction(@RequestHeader(value = "Authorization") String authorizationHeader,
                                                  @PathVariable("month") String month) {

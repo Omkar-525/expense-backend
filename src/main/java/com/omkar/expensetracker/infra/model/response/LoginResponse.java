@@ -16,7 +16,6 @@ public class LoginResponse extends BaseResponse {
     private User user;
 
     @Builder
-
     public LoginResponse(HttpStatus httpStatus, String status, String responseCode, String responseDescription, String jwt, User user) {
         super(httpStatus, status, responseCode, responseDescription);
         this.jwt = jwt;
