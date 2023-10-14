@@ -2,6 +2,7 @@ package com.omkar.expensetracker.security.filter;
 
 import com.omkar.expensetracker.security.exception.InvalidTokenException;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+//userfilter :
 public class UserFilter extends OncePerRequestFilter {
 
     private String SECRET_KEY = "secret";
@@ -31,3 +33,4 @@ public class UserFilter extends OncePerRequestFilter {
 
     }
 }
+

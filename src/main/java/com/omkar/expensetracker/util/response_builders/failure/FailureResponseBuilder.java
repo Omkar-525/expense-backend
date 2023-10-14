@@ -1,10 +1,7 @@
 package com.omkar.expensetracker.util.response_builders.failure;
 
 import com.omkar.expensetracker.infra.model.BaseResponse;
-import com.omkar.expensetracker.infra.model.response.GetBudgetResponse;
-import com.omkar.expensetracker.infra.model.response.GetDashboardResponse;
-import com.omkar.expensetracker.infra.model.response.GetTransactionResponse;
-import com.omkar.expensetracker.infra.model.response.LoginResponse;
+import com.omkar.expensetracker.infra.model.response.*;
 import com.omkar.expensetracker.util.response_builders.BaseFailure;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -53,4 +50,15 @@ public class FailureResponseBuilder {
                 .httpStatus(baseResponse.getHttpStatus())
                 .build();
     }
+
+    public ProfileResponse getUser(String description) {
+        BaseResponse baseResponse = baseFailure.baseFailResponse(description);
+        return ProfileResponse.builder()
+                .status(baseResponse.getStatus())
+                .responseDescription(baseResponse.getResponseDescription())
+                .responseCode(baseResponse.getResponseCode())
+                .httpStatus(baseResponse.getHttpStatus())
+                .build();
+    }
+
 }

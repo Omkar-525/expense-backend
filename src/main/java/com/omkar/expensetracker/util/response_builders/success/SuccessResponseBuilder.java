@@ -69,4 +69,16 @@ public class SuccessResponseBuilder {
                 .totalExpense(new TotalExpense(totalExpense,totalOwed,totalWeOwe))
                 .build();
     }
+
+    public ProfileResponse getUser(User user) {
+        BaseResponse baseResponse = baseSuccess.baseSuccessResponse("Get Dashboard info Success");
+        return ProfileResponse.builder()
+                .status(baseResponse.getStatus())
+                .responseDescription(baseResponse.getResponseDescription())
+                .responseCode(baseResponse.getResponseCode())
+                .httpStatus(baseResponse.getHttpStatus())
+                .name(user.getName())
+                .email(user.getEmail())
+                .build();
+    }
 }

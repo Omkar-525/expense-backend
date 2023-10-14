@@ -110,6 +110,7 @@ public class TransactionServiceImpl implements TransactionService {
                             .amount(request.getAmount())
                             .date(request.getDate())
                             .category(cat)
+                            .description(request.getDescription())
                             .user(user.get())
                             .build();
                     transactionRepository.save(transaction);

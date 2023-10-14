@@ -1,6 +1,5 @@
 package com.omkar.expensetracker.infra.model.request;
 
-
 import com.omkar.expensetracker.infra.model.BaseRequest;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,15 +10,9 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class SetTransactionRequest extends BaseRequest {
+public class ChangePasswordRequest extends BaseRequest {
 
-    public String date;
+    public String oldPassword;
 
-    public String type;
-
-    public Integer amount;
-
-    public String category;
-
-    public String description;
+    public String newPassword;
 }
